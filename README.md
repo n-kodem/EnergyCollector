@@ -1,5 +1,6 @@
 # EnergyCollector
 
+##Description
 A game for a request from pedagogy students to write a game for a social campaign, carried out as a project for course credit.
 
 The premise of the game:
