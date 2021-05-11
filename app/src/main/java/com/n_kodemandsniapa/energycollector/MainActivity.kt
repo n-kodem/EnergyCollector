@@ -15,6 +15,8 @@ import android.graphics.Bitmap
 import android.location.Geocoder
 import android.location.Location
 import android.location.LocationManager
+import android.os.CountDownTimer
+import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
 import android.util.Log
@@ -27,10 +29,27 @@ import java.util.*
 
 class MainActivity : AppCompatActivity() {
 
+    var prevLongtitude:Double = 0.0
+    var prevLatitude:Double = 0.0
+    var lastestLongtitude:Double = 0.0
+    var lastestLatitude:Double = 0.0
+
+    lateinit var mainHandler: Handler
+    private val updateTextTask = object : Runnable {
+        override fun run() {
+            onTick()
+            mainHandler.postDelayed(this, 5000)
+        }
+    }
+
     lateinit var fusedLocationProviderClient: FusedLocationProviderClient
     lateinit var locationRequest: LocationRequest
     var PERMISSION_ID = 1000
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Timer
+        mainHandler = Handler(Looper.getMainLooper())
+
+
         if(CheckPermission()){
             RequestPermission()
         }
@@ -38,10 +57,6 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         //button.isEnabled = false
         fusedLocationProviderClient=LocationServices.getFusedLocationProviderClient(this)
-        button.setOnClickListener {
-            Log.i("","d")
-            getLastLocation()
-        }
     }
     @SuppressLint("SetTextI18n", "MissingPermission")
     private fun  getLastLocation(){
@@ -49,11 +64,13 @@ class MainActivity : AppCompatActivity() {
             if(isLocationEnabled()){
                 Log.i("","u")
                 fusedLocationProviderClient.lastLocation.addOnCompleteListener {task->
-                    var location:Location? = task.result
+                    var location:Location?= task.result
                     if(location == null){
                         Toast.makeText(this,"Location Null",Toast.LENGTH_SHORT).show()
                         NewLocationData()
                     }else{
+                        lastestLongtitude = location.longitude
+                        lastestLatitude = location.latitude
                         Log.i("","p")
                         Log.d("Debug:" ,"Your Location:"+ location.longitude)
                         locationView.text = "You Current Location is : Long: "+ location.longitude + " , Lat: " + location.latitude + "\n" + getCityName(location.latitude,location.longitude)
@@ -93,7 +110,7 @@ class MainActivity : AppCompatActivity() {
         return false
     }
     private fun RequestPermission(){
-        //this function will allows us to tell the user to requesut the necessary permsiion if they are not garented
+        //this function will allows us to tell the user to requesut the necessary permsiion if they are not guaranted
         ActivityCompat.requestPermissions(
             this,
             arrayOf(android.Manifest.permission.ACCESS_COARSE_LOCATION,android.Manifest.permission.ACCESS_FINE_LOCATION,android.Manifest.permission.INTERNET),
@@ -112,9 +129,6 @@ class MainActivity : AppCompatActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode==PERMISSION_ID&&grantResults[0]==PackageManager.PERMISSION_GRANTED){
-            button.isEnabled = true
-        }
     }
     private fun getCityName(lat: Double,long: Double):String{
         var cityName:String = ""
@@ -126,5 +140,19 @@ class MainActivity : AppCompatActivity() {
         countryName = Adress[0].countryName
         Log.d("Debug:", "Your City: $cityName ; your Country $countryName")
         return cityName
+    }
+    // Timer Func
+    override fun onPause() {
+        super.onPause()
+        mainHandler.removeCallbacks(updateTextTask)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        mainHandler.post(updateTextTask)
+    }
+    // On timer tick
+    fun onTick() {
+        getLastLocation()
     }
 }
