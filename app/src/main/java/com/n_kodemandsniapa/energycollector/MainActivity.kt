@@ -69,6 +69,8 @@ class MainActivity : AppCompatActivity() {
                         Toast.makeText(this,"Location Null",Toast.LENGTH_SHORT).show()
                         NewLocationData()
                     }else{
+                        prevLatitude=lastestLatitude
+                        prevLongtitude=lastestLongtitude
                         lastestLongtitude = location.longitude
                         lastestLatitude = location.latitude
                         Log.i("","p")
