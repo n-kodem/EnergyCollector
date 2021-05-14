@@ -20,6 +20,7 @@ import androidx.core.app.ActivityCompat
 import com.google.android.gms.location.*
 import kotlinx.android.synthetic.main.activity_main.*
 import java.util.*
+import kotlin.math.*
 
 class MainActivity : AppCompatActivity() {
 
@@ -32,8 +33,10 @@ class MainActivity : AppCompatActivity() {
     // Distance
     var distanceWalked:Double = 0.0 // meters
     // -----
+    var distanceToWalk:Double = 1000.0 // meters
     lateinit var mainHandler: Handler
     private val updateTextTask = object : Runnable {
+        @SuppressLint("SetTextI18n")
         override fun run() {
             onTick()
             if(prevLatitude != 0.0 || prevLongtitude != 0.0){
@@ -41,7 +44,12 @@ class MainActivity : AppCompatActivity() {
                 if(actualMeasure<176){
                     distanceWalked+=actualMeasure
                 }
-
+            }
+            if(distanceToWalk<distanceWalked){
+                TextProgress.text = "100%"
+            }
+            else{
+                TextProgress.text ="${(distanceWalked/distanceToWalk*100).roundToInt()}%"
             }
             mainHandler.postDelayed(this, 60000)
         }
@@ -163,9 +171,9 @@ class MainActivity : AppCompatActivity() {
         val rad = 6378.137
         val dLat = lat2 * Math.PI / 180 - lat1 * Math.PI / 180
         val dLon = lon2 * Math.PI / 180 - lon1 * Math.PI / 180
-        val a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
-        val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        val d = rad * c;
-        return d * 1000;
+        val a = sin(dLat/2) * sin(dLat/2) + cos(lat1 * Math.PI / 180) * cos(lat2 * Math.PI / 180) * sin(dLon/2) * sin(dLon/2)
+        val c = 2 * atan2(sqrt(a), sqrt(1-a))
+        val d = rad * c
+        return d * 1000
     }
 }
