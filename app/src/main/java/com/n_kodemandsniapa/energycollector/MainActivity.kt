@@ -3,42 +3,47 @@ package com.n_kodemandsniapa.energycollector
 //import com.google.android.gms.location.R
 
 
-import android.content.pm.PackageManager
-import androidx.appcompat.app.AppCompatActivity
-import android.os.Bundle
 import android.Manifest
 import android.annotation.SuppressLint
-import android.content.ContentProviderClient
 import android.content.Context
-import android.content.Intent
-import android.graphics.Bitmap
+import android.content.pm.PackageManager
 import android.location.Geocoder
 import android.location.Location
 import android.location.LocationManager
-import android.os.CountDownTimer
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import com.google.android.gms.location.*
 import kotlinx.android.synthetic.main.activity_main.*
 import java.util.*
 
 class MainActivity : AppCompatActivity() {
 
-    var prevLongtitude:Double = 0.0
+    // Geolocation
     var prevLatitude:Double = 0.0
-    var lastestLongtitude:Double = 0.0
+    var prevLongtitude:Double = 0.0
+    // Items to save -----
     var lastestLatitude:Double = 0.0
-
+    var lastestLongtitude:Double = 0.0
+    // Distance
+    var distanceWalked:Double = 0.0 // meters
+    // -----
     lateinit var mainHandler: Handler
     private val updateTextTask = object : Runnable {
         override fun run() {
             onTick()
-            mainHandler.postDelayed(this, 5000)
+            if(prevLatitude != 0.0 || prevLongtitude != 0.0){
+                val actualMeasure = measure(prevLatitude,prevLongtitude,lastestLatitude,lastestLongtitude)
+                if(actualMeasure<176){
+                    distanceWalked+=actualMeasure
+                }
+
+            }
+            mainHandler.postDelayed(this, 60000)
         }
     }
 
@@ -47,43 +52,40 @@ class MainActivity : AppCompatActivity() {
     var PERMISSION_ID = 1000
     override fun onCreate(savedInstanceState: Bundle?) {
         // Timer
-        mainHandler = Handler(Looper.getMainLooper())
-
-
         if(CheckPermission()){
             RequestPermission()
         }
+        onTick()
+        mainHandler = Handler(Looper.getMainLooper())
+
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        //button.isEnabled = false
         fusedLocationProviderClient=LocationServices.getFusedLocationProviderClient(this)
     }
     @SuppressLint("SetTextI18n", "MissingPermission")
     private fun  getLastLocation(){
         if(CheckPermission()){
             if(isLocationEnabled()){
-                Log.i("","u")
                 fusedLocationProviderClient.lastLocation.addOnCompleteListener {task->
                     var location:Location?= task.result
                     if(location == null){
                         Toast.makeText(this,"Location Null",Toast.LENGTH_SHORT).show()
                         NewLocationData()
                     }else{
+                        // Values Update
                         prevLatitude=lastestLatitude
                         prevLongtitude=lastestLongtitude
                         lastestLongtitude = location.longitude
                         lastestLatitude = location.latitude
-                        Log.i("","p")
+                        // Logs and location display
                         Log.d("Debug:" ,"Your Location:"+ location.longitude)
                         locationView.text = "You Current Location is : Long: "+ location.longitude + " , Lat: " + location.latitude + "\n" + getCityName(location.latitude,location.longitude)
                     }
                 }
             }else{
-                Log.i("","a")
                 Toast.makeText(this,"Please Turn on Your device Location",Toast.LENGTH_SHORT).show()
             }
         }else{
-            Log.i("","XD?")
             RequestPermission()
         }
     }
@@ -156,5 +158,14 @@ class MainActivity : AppCompatActivity() {
     // On timer tick
     fun onTick() {
         getLastLocation()
+    }
+    fun measure(lat1:Double,lon1:Double,lat2:Double,lon2:Double):Double{
+        val rad = 6378.137
+        val dLat = lat2 * Math.PI / 180 - lat1 * Math.PI / 180
+        val dLon = lon2 * Math.PI / 180 - lon1 * Math.PI / 180
+        val a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+        val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        val d = rad * c;
+        return d * 1000;
     }
 }
