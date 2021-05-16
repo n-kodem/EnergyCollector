@@ -1,24 +1,27 @@
 package com.n_kodemandsniapa.energycollector
 
-//import com.google.android.gms.location.R
-
-
+import android.os.Bundle
+import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.android.material.snackbar.Snackbar
+import androidx.appcompat.app.AppCompatActivity
+import android.view.Menu
+import android.view.MenuItem
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Geocoder
 import android.location.Location
 import android.location.LocationManager
-import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat.getSystemService
 import com.google.android.gms.location.*
-import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.android.synthetic.main.fragment_first.*
 import java.util.*
 import kotlin.math.*
 
@@ -39,37 +42,59 @@ class MainActivity : AppCompatActivity() {
         @SuppressLint("SetTextI18n")
         override fun run() {
             onTick()
-            if(prevLatitude != 0.0 || prevLongtitude != 0.0){
-                val actualMeasure = measure(prevLatitude,prevLongtitude,lastestLatitude,lastestLongtitude)
-                if(actualMeasure<176){
-                    distanceWalked+=actualMeasure
-                }
+            val actualMeasure = measure(prevLatitude,prevLongtitude,lastestLatitude,lastestLongtitude)
+            if(actualMeasure<176){
+                distanceWalked+=actualMeasure
             }
+            textProgress.text="ADFGWREGAG"
             if(distanceToWalk<distanceWalked){
-                TextProgress.text = "100%"
+                textProgress.text = "100%"
             }
             else{
-                TextProgress.text ="${(distanceWalked/distanceToWalk*100).roundToInt()}%"
+                textProgress.text ="${(distanceWalked/distanceToWalk*100).roundToInt()}%"
             }
             mainHandler.postDelayed(this, 60000)
         }
     }
 
-    lateinit var fusedLocationProviderClient: FusedLocationProviderClient
-    lateinit var locationRequest: LocationRequest
-    var PERMISSION_ID = 1000
+    private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
+    private lateinit var locationRequest: LocationRequest
+    private var PERMISSION_ID = 1000
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+        setSupportActionBar(findViewById(R.id.toolbar))
         // Timer
         if(CheckPermission()){
             RequestPermission()
         }
+        this.fusedLocationProviderClient =LocationServices.getFusedLocationProviderClient(this)
         onTick()
-        mainHandler = Handler(Looper.getMainLooper())
+        this.mainHandler = Handler(Looper.getMainLooper())
 
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-        fusedLocationProviderClient=LocationServices.getFusedLocationProviderClient(this)
+        findViewById<FloatingActionButton>(R.id.fab).setOnClickListener { view ->
+            Snackbar.make(view, "Autorzy: Nikodem Reszka i Hubert Wasilewski", Snackbar.LENGTH_LONG)
+                    .setAction("Action", null).show()
+        }
     }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        menuInflater.inflate(R.menu.menu_main, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        return when (item.itemId) {
+            R.id.action_settings -> true
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+
     @SuppressLint("SetTextI18n", "MissingPermission")
     private fun  getLastLocation(){
         if(CheckPermission()){
@@ -87,7 +112,7 @@ class MainActivity : AppCompatActivity() {
                         lastestLatitude = location.latitude
                         // Logs and location display
                         Log.d("Debug:" ,"Your Location:"+ location.longitude)
-                        locationView.text = "You Current Location is : Long: "+ location.longitude + " , Lat: " + location.latitude + "\n" + getCityName(location.latitude,location.longitude)
+                        this.locationView.text = "You Current Location is : Long: "+ location.longitude + " , Lat: " + location.latitude + "\n" + getCityName(location.latitude,location.longitude)
                     }
                 }
             }else{
@@ -143,13 +168,11 @@ class MainActivity : AppCompatActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
     private fun getCityName(lat: Double,long: Double):String{
-        var cityName:String = ""
-        var countryName = ""
-        var geoCoder = Geocoder(this, Locale.getDefault())
-        var Adress = geoCoder.getFromLocation(lat,long,3)
+        val geoCoder = Geocoder(this, Locale.getDefault())
+        val Adress = geoCoder.getFromLocation(lat,long,3)
 
-        cityName = Adress[0].locality
-        countryName = Adress[0].countryName
+        val cityName:String = Adress[0].locality
+        val countryName = Adress[0].countryName
         Log.d("Debug:", "Your City: $cityName ; your Country $countryName")
         return cityName
     }
