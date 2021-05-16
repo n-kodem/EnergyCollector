@@ -57,6 +57,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    
+
     private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
     private lateinit var locationRequest: LocationRequest
     private var PERMISSION_ID = 1000
@@ -71,6 +73,7 @@ class MainActivity : AppCompatActivity() {
         }
         this.fusedLocationProviderClient =LocationServices.getFusedLocationProviderClient(this)
         onTick()
+        textProgress.text="XD"
         this.mainHandler = Handler(Looper.getMainLooper())
 
         findViewById<FloatingActionButton>(R.id.fab).setOnClickListener { view ->
