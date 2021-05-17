@@ -1,34 +1,29 @@
 package com.n_kodemandsniapa.energycollector
 
-import android.os.Bundle
-import com.google.android.material.floatingactionbutton.FloatingActionButton
-import com.google.android.material.snackbar.Snackbar
-import androidx.appcompat.app.AppCompatActivity
-import android.view.Menu
-import android.view.MenuItem
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
-import android.location.Geocoder
 import android.location.Location
 import android.location.LocationManager
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.view.Menu
+import android.view.MenuItem
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat.getSystemService
 import com.google.android.gms.location.*
-import kotlinx.android.synthetic.main.content_main.*
-import kotlinx.android.synthetic.main.fragment_first.*
+import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.android.material.snackbar.Snackbar
 import java.io.File
-import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.lang.Exception
-import java.util.*
-import kotlin.math.*
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 class MainActivity : AppCompatActivity() {
 
@@ -36,15 +31,16 @@ class MainActivity : AppCompatActivity() {
 
 
     // Geolocation
-    var prevLatitude:Double = 0.0
-    var prevLongtitude:Double = 0.0
     // Items to save -----
-    var lastestLatitude:Double = 0.0
-    var lastestLongtitude:Double = 0.0
     // Distance
     var distanceWalked:Double = 0.0 // meters
-    // -----
+
     var distanceToWalk:Double = 1000.0 // meters
+
+    var startPoint = Location("locationA")
+
+    var endPoint = Location("locationA")
+    // -----
     lateinit var mainHandler: Handler
 
     private val updateTextTask = object : Runnable {
@@ -55,10 +51,15 @@ class MainActivity : AppCompatActivity() {
 
             val SAVEFILE = File(filesDir, FILENAME);
 
-            val actualMeasure = measure(prevLatitude,prevLongtitude,lastestLatitude,lastestLongtitude)
 
-            if(actualMeasure<176){
-                distanceWalked+=actualMeasure
+            val distance = startPoint.distanceTo(endPoint).toDouble()
+
+
+            Log.d("LONGS","${startPoint.longitude} ${endPoint.latitude}")
+            Log.d("Lats", "${startPoint.latitude} ${endPoint.latitude}")
+            Log.d("kurwa","${distance}")
+            if(distance<176){
+                distanceWalked+=distance
             }
 
             var content = openFileInput(FILENAME).bufferedReader().useLines { lines ->
@@ -73,11 +74,11 @@ class MainActivity : AppCompatActivity() {
             FileOutputStream(SAVEFILE).write(
                     new_content.toByteArray()
             )
-            mainHandler.postDelayed(this, 1000)
+            mainHandler.postDelayed(this, 30000)
         }
     }
 
-    
+
 
     private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
     private lateinit var locationRequest: LocationRequest
@@ -94,12 +95,15 @@ class MainActivity : AppCompatActivity() {
         }
         fusedLocationProviderClient =LocationServices.getFusedLocationProviderClient(this)
 
-        val SAVEFILE = File(filesDir, FILENAME);
+        val SAVEFILE = File(filesDir, FILENAME)
+
         getLastLocation()
+        getLastLocation()
+
         if(!SAVEFILE.exists())
         {
             SAVEFILE.createNewFile()
-            val new_content = distanceWalked.toString()+":"+lastestLatitude.toString()+":"+lastestLongtitude.toString()
+            val new_content = distanceWalked.toString()+":"+endPoint.latitude.toString()+":"+endPoint.longitude.toString()
 
             openFileOutput(SAVEFILE.name, Context.MODE_PRIVATE).use {
                 it.write(new_content.toByteArray())
@@ -108,23 +112,18 @@ class MainActivity : AppCompatActivity() {
         else{
 
             var content = openFileInput(FILENAME).bufferedReader().useLines { lines ->
-                    lines.fold("") { some, text ->
-                        "$some\n$text"
-                    }
+                lines.fold("") { some, text ->
+                    "$some\n$text"
                 }
+            }
 
             val parts = content.split(":")
 
             distanceWalked = parts[0].toDouble()
-            lastestLatitude = parts[1].toDouble()
-            lastestLongtitude = parts[2].toDouble()
+            endPoint.latitude = parts[1].toDouble()
+            endPoint.longitude = parts[2].toDouble()
         }
 
-
-
-
-
-        getLastLocation()
         this.mainHandler = Handler(Looper.getMainLooper())
 
         findViewById<FloatingActionButton>(R.id.fab).setOnClickListener { view ->
@@ -165,18 +164,23 @@ class MainActivity : AppCompatActivity() {
                         }
                         val parts  = content.split(":")
 
-                        val new_content = parts[0] + ":" + lastestLatitude + ":"+ lastestLongtitude
+
+
+                        startPoint.latitude = endPoint.latitude
+                        startPoint.longitude = endPoint.longitude
+
+
+                        endPoint.latitude = location.latitude
+                        endPoint.longitude = location.longitude
+
+                        val new_content = parts[0] + ":" + endPoint.latitude + ":"+  endPoint.longitude
 
                         FileOutputStream(SAVEFILE).write(
-                            new_content.toByteArray()
+                                new_content.toByteArray()
                         )
 
-                        prevLatitude=lastestLatitude
-                        prevLongtitude=lastestLongtitude
-                        lastestLongtitude = location.longitude
-                        lastestLatitude = location.latitude
                         // Logs and location display
-                        Log.d("Debug:" ,"Your Location:"+ location.longitude)
+                        Log.d("Debug:" ,"Your Location: long"+ location.longitude +"lat"+ location.latitude)
 
                     }
                 }
@@ -205,8 +209,8 @@ class MainActivity : AppCompatActivity() {
     }
     private fun CheckPermission():Boolean{
         if((ActivityCompat.checkSelfPermission(this,Manifest.permission.INTERNET)==PackageManager.PERMISSION_GRANTED)&&
-            (ActivityCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED)&&
-            (ActivityCompat.checkSelfPermission(this,Manifest.permission.ACCESS_COARSE_LOCATION)==PackageManager.PERMISSION_GRANTED)){
+                (ActivityCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED)&&
+                (ActivityCompat.checkSelfPermission(this,Manifest.permission.ACCESS_COARSE_LOCATION)==PackageManager.PERMISSION_GRANTED)){
             return true
         }
         return false
@@ -214,9 +218,9 @@ class MainActivity : AppCompatActivity() {
     private fun RequestPermission(){
         //this function will allows us to tell the user to request the necessary permission if they are not
         ActivityCompat.requestPermissions(
-            this,
-            arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION,Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.INTERNET),
-            PERMISSION_ID
+                this,
+                arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION,Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.INTERNET),
+                PERMISSION_ID
         )
     }
 
@@ -226,9 +230,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
+            requestCode: Int,
+            permissions: Array<out String>,
+            grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
@@ -242,15 +246,5 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         mainHandler.post(updateTextTask)
-    }
-
-    fun measure(lat1:Double,lon1:Double,lat2:Double,lon2:Double):Double{
-        val rad = 6378.137
-        val dLat = lat2 * Math.PI / 180 - lat1 * Math.PI / 180
-        val dLon = lon2 * Math.PI / 180 - lon1 * Math.PI / 180
-        val a = sin(dLat/2) * sin(dLat/2) + cos(lat1 * Math.PI / 180) * cos(lat2 * Math.PI / 180) * sin(dLon/2) * sin(dLon/2)
-        val c = 2 * atan2(sqrt(a), sqrt(1-a))
-        val d = rad * c
-        return d * 1000
     }
 }
