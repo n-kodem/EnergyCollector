@@ -40,6 +40,8 @@ class MainActivity : AppCompatActivity() {
     var startPoint = Location("locationA")
 
     var endPoint = Location("locationA")
+
+    var isOverloaded = false
     // -----
     lateinit var mainHandler: Handler
 
@@ -48,32 +50,32 @@ class MainActivity : AppCompatActivity() {
         override fun run() {
             getLastLocation()
 
-
-            val SAVEFILE = File(filesDir, FILENAME);
-
-
             val distance = startPoint.distanceTo(endPoint).toDouble()
-
-
-            Log.d("LONGS","${startPoint.longitude} ${endPoint.latitude}")
+            val results = FloatArray(1)
             Log.d("Lats", "${startPoint.latitude} ${endPoint.latitude}")
-            Log.d("kurwa","${distance}")
+            Log.d("LONGS","${startPoint.longitude} ${endPoint.latitude}")
+            Location.distanceBetween(startPoint.latitude, startPoint.longitude, endPoint.latitude, endPoint.latitude, results)
+
+            Log.d("distance","${distance}")
+            Log.d("NEXTdistance", results[0].toString())
             if(distance<176){
                 distanceWalked+=distance
             }
-
-            var content = openFileInput(FILENAME).bufferedReader().useLines { lines ->
-                lines.fold("") { some, text ->
-                    "$some\n$text"
-                }
+            if (distanceToWalk<distanceWalked){
+                distanceWalked = 0.0
+                isOverloaded=true
             }
-            val parts  = content.split(":")
+            else{
+                isOverloaded=false
+            }
 
-            val new_content = distanceWalked.toString() + ":" + parts[1] + ":"+ parts[2]
+            val parts  = LoadData().split(":")
 
-            FileOutputStream(SAVEFILE).write(
-                    new_content.toByteArray()
-            )
+            val new_content = distanceWalked.toString()+":"+endPoint.latitude.toString()+":"+endPoint.longitude.toString()+":"+isOverloaded.toString()
+            Log.d("wszystko","$parts")
+            SaveData(new_content)
+
+            // Next calling this in 30s
             mainHandler.postDelayed(this, 30000)
         }
     }
@@ -87,50 +89,43 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
 
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_main)
         setSupportActionBar(findViewById(R.id.toolbar))
         // Timer
         if(CheckPermission()){
             RequestPermission()
         }
         fusedLocationProviderClient =LocationServices.getFusedLocationProviderClient(this)
+        // First Time Location Loading
+        loadLocFirstTime()
 
+        // Creating/Downloading file data
         val SAVEFILE = File(filesDir, FILENAME)
-
-        getLastLocation()
-        getLastLocation()
-
         if(!SAVEFILE.exists())
         {
             SAVEFILE.createNewFile()
-            val new_content = distanceWalked.toString()+":"+endPoint.latitude.toString()+":"+endPoint.longitude.toString()
+            val new_content = distanceWalked.toString()+":"+endPoint.latitude.toString()+":"+endPoint.longitude.toString()+":"+isOverloaded.toString()
 
             openFileOutput(SAVEFILE.name, Context.MODE_PRIVATE).use {
                 it.write(new_content.toByteArray())
             }
         }
         else{
-
-            var content = openFileInput(FILENAME).bufferedReader().useLines { lines ->
-                lines.fold("") { some, text ->
-                    "$some\n$text"
-                }
-            }
-
-            val parts = content.split(":")
-
+            val parts = LoadData().split(":")
             distanceWalked = parts[0].toDouble()
             endPoint.latitude = parts[1].toDouble()
             endPoint.longitude = parts[2].toDouble()
+            isOverloaded = parts[3].toBoolean()
         }
 
+        // Creating mainLoop
         this.mainHandler = Handler(Looper.getMainLooper())
 
+        // OnClick listener to show authors names
         findViewById<FloatingActionButton>(R.id.fab).setOnClickListener { view ->
             Snackbar.make(view, "Autorzy: Nikodem Reszka i Hubert Wasilewski", Snackbar.LENGTH_SHORT)
                     .setAction("Action", null).show()
         }
-        //setContentView(R.layout.fragment_first);
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -145,42 +140,31 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // Get Location obj
     @SuppressLint("SetTextI18n", "MissingPermission")
     private fun  getLastLocation(){
         if(CheckPermission()){
             if(isLocationEnabled()){
                 fusedLocationProviderClient.lastLocation.addOnCompleteListener {task->
-                    var location = task.result
-                    val SAVEFILE = File(filesDir, FILENAME);
+                    val location = task.result
                     if(location == null){
                         Toast.makeText(this,"Location Null",Toast.LENGTH_SHORT).show()
                         NewLocationData()
                     }else{
-                        // Values Update
-                        var content = openFileInput(FILENAME).bufferedReader().useLines { lines ->
-                            lines.fold("") { some, text ->
-                                "$some\n$text"
-                            }
-                        }
-                        val parts  = content.split(":")
-
-
-
+                        // StartPoints
                         startPoint.latitude = endPoint.latitude
                         startPoint.longitude = endPoint.longitude
 
-
+                        // EndPoints
+                        Log.d("LASTLOC","LAT ${endPoint.latitude} LONG ${endPoint.longitude}")
                         endPoint.latitude = location.latitude
                         endPoint.longitude = location.longitude
+                        Log.d("NEWLOC","LAT ${endPoint.latitude} LONG ${endPoint.longitude}")
+                        // Saving new data to file
+                        //val new_content = parts[0] + ":" + endPoint.latitude + ":"+  endPoint.longitude+":"+parts[3]
+                        val new_content = distanceWalked.toString() + ":" + endPoint.latitude + ":"+  endPoint.longitude+":"+isOverloaded.toString()
 
-                        val new_content = parts[0] + ":" + endPoint.latitude + ":"+  endPoint.longitude
-
-                        FileOutputStream(SAVEFILE).write(
-                                new_content.toByteArray()
-                        )
-
-                        // Logs and location display
-                        Log.d("Debug:" ,"Your Location: long"+ location.longitude +"lat"+ location.latitude)
+                        SaveData(new_content)
 
                     }
                 }
@@ -246,5 +230,51 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         mainHandler.post(updateTextTask)
+    }
+    fun SaveData(data:String){
+        val SAVEFILE = File(filesDir, FILENAME)
+        FileOutputStream(SAVEFILE).write(
+                data.toByteArray()
+        )
+    }
+    fun LoadData(): String {
+        var data = openFileInput(FILENAME).bufferedReader().useLines { lines ->
+            lines.fold("") { some, text ->
+                "$some$text"
+            }
+        }
+        return data
+    }
+    @SuppressLint("MissingPermission")
+    fun loadLocFirstTime(){
+        if(CheckPermission()){
+            if(isLocationEnabled()){
+                fusedLocationProviderClient.lastLocation.addOnCompleteListener {task->
+                    val location = task.result
+                    if(location == null){
+                        Toast.makeText(this,"Location Null",Toast.LENGTH_SHORT).show()
+                        NewLocationData()
+                    }else{
+                        // StartPoints
+                        startPoint.latitude = location.latitude
+                        startPoint.longitude = location.longitude
+
+                        // EndPoints
+                        endPoint.latitude = location.latitude
+                        endPoint.longitude = location.longitude
+
+                        // Saving data to file
+                        val new_content = distanceWalked.toString() + ":" + endPoint.latitude + ":"+  endPoint.longitude+":"+isOverloaded.toString()
+
+                        SaveData(new_content)
+
+                    }
+                }
+            }else{
+                Toast.makeText(this,"Please Turn on Your device Location",Toast.LENGTH_SHORT).show()
+            }
+        }else{
+            RequestPermission()
+        }
     }
 }
