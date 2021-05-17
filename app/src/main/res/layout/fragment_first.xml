@@ -23,7 +23,7 @@
         android:id="@+id/locationView"
         android:layout_width="146dp"
         android:layout_height="99dp"
-        android:text="TextView"
+        android:text="123"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.498"
