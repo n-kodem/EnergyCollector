@@ -118,8 +118,8 @@ class SecondFragment : Fragment() {
                         Log.d("PING_angle_pad", pad_angle.toString())
                         Log.d("PING_angle_ball_new", ball_angle.toString())
 
-                        ball.x = ball.x + 100 * (sin(ball_angle.toFloat()))
-                        ball.y = ball.y + 100 * (cos(ball_angle.toFloat()))
+                        ball.x = ball.x + (sin(ball_angle.toFloat()))
+                        ball.y = ball.y + (cos(ball_angle.toFloat()))
 
                     } else {
                         ball.x = ball.x + 5 * (sin(ball_angle.toFloat()))
