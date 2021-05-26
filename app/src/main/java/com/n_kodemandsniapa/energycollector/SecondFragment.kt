@@ -112,7 +112,7 @@ class SecondFragment : Fragment() {
                         // musisz po prostu sprawdzic o ktora z przykladowo 5 stfer sie odbija
 
 
-                        ball_angle = ball_angle - ((ball_angle - pad_angle) - PI)*2 + pad_angle
+                        ball_angle = pad_angle + PI
 
 
                         Log.d("PING_angle_pad", pad_angle.toString())
